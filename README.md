@@ -9,7 +9,7 @@
 [![SQLite](https://img.shields.io/badge/SQLite-better--sqlite3-003b57?logo=sqlite&logoColor=white)](https://github.com/WiseLibs/better-sqlite3)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-06b6d4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 
-<img src=".github/demo.svg" alt="InvoiceGen demo" width="100%"/>
+<img src=".github/demo2.svg" alt="InvoiceGen demo" width="100%"/>
 
 </div>
 
