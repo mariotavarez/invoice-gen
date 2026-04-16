@@ -9,7 +9,7 @@
 [![SQLite](https://img.shields.io/badge/SQLite-better--sqlite3-003b57?logo=sqlite&logoColor=white)](https://github.com/WiseLibs/better-sqlite3)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-06b6d4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 
-<img src=".github/demo.svg" alt="InvoiceGen demo" width="780" />
+<img src=".github/demo.svg" alt="InvoiceGen demo" width="100%"/>
 
 </div>
 
@@ -46,56 +46,137 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-The SQLite database is created automatically at `data/invoices.db` on first run.
+The SQLite database is created automatically at `data/invoices.db` on first run. No setup needed.
+
+**Production build:**
+```bash
+npm run build && npm start
+```
+
+**Type check:**
+```bash
+npx tsc --noEmit
+```
 
 ---
 
 ## How It Works
 
-1. **Create an invoice** at `/invoices/new` — fill in client info and add line items
-2. **Review & manage** at `/invoices/[id]` — view details, change status, edit
-3. **Print / PDF** at `/invoices/[id]/preview` — print-optimized layout, browser "Save as PDF"
-4. **Track everything** on the dashboard — stats update in real-time via Server Components
+```
+User fills form → Server Action validates inputs
+               → nanoid generates INV-2026-XXXX code
+               → better-sqlite3 stores invoice + line items
 
-All mutations happen through **Next.js Server Actions** — no API routes, no client-side fetch calls. The SQLite database is a single file you can back up with `cp`.
+User visits /invoices/[id]/preview → Server Component renders printable layout
+                                   → Browser "Print → Save as PDF"
+
+Dashboard → Server Component reads live SQLite data
+          → Renders KPI cards + sortable table (0 client fetches)
+```
+
+All mutations go through **Next.js Server Actions** — no API routes, no client-side fetch. The SQLite database is a single file at `data/invoices.db` you can back up with `cp`.
+
+---
+
+## Invoice Status Workflow
+
+```
+Draft ──→ Sent ──→ Paid
+  ↑________________________↓  (revert to draft)
+```
+
+One-click transitions from the invoice detail page. Status badge updates server-side with `revalidatePath`.
+
+---
+
+## PDF Export
+
+The `/invoices/[id]/preview` route renders a print-optimized page. Use your browser's built-in **Print → Save as PDF**:
+
+- Navigation and action buttons are hidden via `@media print`
+- Line items table expands to full width
+- Page margins set to 0.5in for clean output
+- Works in Chrome, Safari, Firefox, Edge
+
+---
+
+## Data Model
+
+```sql
+CREATE TABLE invoices (
+  id           TEXT PRIMARY KEY,   -- INV-2026-0001
+  client_name  TEXT NOT NULL,
+  client_email TEXT NOT NULL,
+  company      TEXT,
+  address      TEXT,
+  status       TEXT DEFAULT 'draft', -- draft | sent | paid
+  due_date     TEXT NOT NULL,
+  notes        TEXT,
+  created_at   TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE line_items (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  invoice_id  TEXT REFERENCES invoices(id) ON DELETE CASCADE,
+  description TEXT NOT NULL,
+  quantity    REAL NOT NULL,
+  unit_price  REAL NOT NULL
+);
+```
+
+---
+
+## Design System
+
+This project uses a **Stripe-inspired design system**. See [DESIGN.md](./DESIGN.md).
+
+Key tokens:
+- Primary: `#533afd` (Stripe purple)
+- Headings: `#061b31` (deep navy, not black)
+- Shadows: `rgba(50,50,93,0.25)` blue-tinted multi-layer
+- Nav background: `#1c1e54` (brand dark)
+- Radius: 4–8px (no pill shapes)
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Framework | Next.js 15 (App Router, Server Actions) |
-| Language | TypeScript 5.7 strict |
-| Styling | Tailwind CSS v4 |
-| Database | SQLite via `better-sqlite3` |
-| ID generation | `nanoid` |
-| Icons | `lucide-react` |
-| Font | Inter (Google Fonts) |
+| Layer | Technology | Version |
+|---|---|---|
+| Framework | Next.js App Router + Server Actions | 15 |
+| Language | TypeScript strict mode | 5.7 |
+| Styling | Tailwind CSS via `@tailwindcss/postcss` | v4 |
+| Database | SQLite via `better-sqlite3` | 9 |
+| ID generation | `nanoid` (URL-safe codes) | 5 |
+| Icons | `lucide-react` | 0.344 |
+| Font | Inter via Google Fonts | — |
 
 ---
 
 ## Project Structure
 
 ```
-app/
-├── page.tsx                  # Dashboard
-├── invoices/
-│   ├── page.tsx              # All invoices
-│   ├── new/page.tsx          # Create form
-│   └── [id]/
-│       ├── page.tsx          # Detail + edit
-│       └── preview/page.tsx  # Printable preview
-components/
-├── InvoiceForm.tsx           # Client + line items form
-├── InvoiceTable.tsx          # Sortable table
-├── PrintableInvoice.tsx      # Print layout
-├── StatusBadge.tsx           # Draft/Sent/Paid badge
-└── StatsCard.tsx             # KPI card
-lib/
-├── db.ts                     # SQLite singleton + queries
-├── actions.ts                # Server Actions
-└── utils.ts                  # formatCurrency, formatDate
+src/
+├── app/
+│   ├── layout.tsx                # Dark navbar with Stripe branding
+│   ├── page.tsx                  # Dashboard — 4 KPI cards + recent invoices
+│   ├── invoices/
+│   │   ├── page.tsx              # All invoices — sortable table
+│   │   ├── new/page.tsx          # Create invoice form
+│   │   └── [id]/
+│   │       ├── page.tsx          # Detail view + status actions + edit
+│   │       └── preview/page.tsx  # Printable PDF-ready layout
+├── components/
+│   ├── InvoiceForm.tsx           # Controlled form with dynamic line items
+│   ├── InvoiceTable.tsx          # Sortable table with delete and status badges
+│   ├── PrintableInvoice.tsx      # Clean print layout (hidden nav via @media print)
+│   ├── StatusBadge.tsx           # Draft / Sent / Paid badge with color variants
+│   ├── StatsCard.tsx             # KPI card with Stripe-purple accent
+│   └── LineItemRow.tsx           # Individual line item row with remove button
+└── lib/
+    ├── db.ts                     # SQLite singleton — WAL mode, schema init, typed queries
+    ├── actions.ts                # Server Actions — create, update, delete, status toggle
+    └── utils.ts                  # formatCurrency, formatDate, generateInvoiceId
 ```
 
 ---
