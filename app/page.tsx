@@ -1,65 +1,139 @@
-import Image from "next/image";
+import Link from 'next/link';
+import { Plus, TrendingUp, DollarSign, Clock, FileText } from 'lucide-react';
+import StatsCard from '@/components/StatsCard';
+import InvoiceTable from '@/components/InvoiceTable';
+import { getDashboardStats, getInvoices } from '@/lib/db';
+import { formatCurrency } from '@/lib/utils';
 
-export default function Home() {
+export const dynamic = 'force-dynamic';
+
+export default function DashboardPage() {
+  const stats = getDashboardStats();
+  const invoices = getInvoices().slice(0, 10);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 24px' }}>
+      {/* Page Header */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          marginBottom: '32px',
+        }}
+      >
+        <div>
+          <h1
+            style={{
+              fontSize: '32px',
+              fontWeight: 300,
+              color: '#061b31',
+              letterSpacing: '-0.64px',
+              margin: 0,
+              lineHeight: 1.2,
+            }}
+          >
+            Dashboard
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p style={{ margin: '8px 0 0', fontSize: '15px', color: '#64748d' }}>
+            Overview of your invoicing activity
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        <Link
+          href="/invoices/new"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '7px',
+            padding: '10px 20px',
+            background: '#533afd',
+            color: '#fff',
+            borderRadius: '4px',
+            fontSize: '14px',
+            fontWeight: 500,
+            textDecoration: 'none',
+          }}
+        >
+          <Plus size={16} />
+          New Invoice
+        </Link>
+      </div>
+
+      {/* Stats Grid */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: '16px',
+          marginBottom: '40px',
+        }}
+      >
+        <StatsCard
+          title="Total Invoiced"
+          value={formatCurrency(stats.total_invoiced)}
+          subtitle={`${stats.invoice_count} invoice${stats.invoice_count !== 1 ? 's' : ''} total`}
+          icon={<TrendingUp size={18} />}
+        />
+        <StatsCard
+          title="Paid"
+          value={formatCurrency(stats.total_paid)}
+          subtitle={`${stats.paid_count} invoice${stats.paid_count !== 1 ? 's' : ''} paid`}
+          icon={<DollarSign size={18} />}
+          accentColor="#15be53"
+        />
+        <StatsCard
+          title="Outstanding"
+          value={formatCurrency(stats.total_outstanding)}
+          subtitle={`${stats.invoice_count - stats.paid_count} unpaid`}
+          icon={<Clock size={18} />}
+          accentColor="#e97316"
+        />
+        <StatsCard
+          title="Drafts"
+          value={String(stats.draft_count)}
+          subtitle="Not yet sent"
+          icon={<FileText size={18} />}
+          accentColor="#64748d"
+        />
+      </div>
+
+      {/* Recent Invoices */}
+      <div>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '16px',
+          }}
+        >
+          <h2
+            style={{
+              fontSize: '18px',
+              fontWeight: 300,
+              color: '#061b31',
+              letterSpacing: '-0.3px',
+              margin: 0,
+            }}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            Recent Invoices
+          </h2>
+          <Link
+            href="/invoices"
+            style={{
+              fontSize: '13px',
+              color: '#533afd',
+              textDecoration: 'none',
+              fontWeight: 500,
+            }}
           >
-            Documentation
-          </a>
+            View all →
+          </Link>
         </div>
-      </main>
+
+        <InvoiceTable invoices={invoices} />
+      </div>
     </div>
   );
 }
